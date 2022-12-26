@@ -1,4 +1,5 @@
 import asyncio
+from collections import defaultdict
 from dataclasses import dataclass
 import discord
 from dotenv import load_dotenv
@@ -23,11 +24,11 @@ class Message:
     content: str
 
 
-messages = []
+messages = defaultdict(list)
 
 
-def messages_to_prompt(adj1, adj2):
-    body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[-25:])
+def messages_to_prompt(channel, adj1, adj2):
+    body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
 
     return "The following is a chatlog. The user 'don't call me cis' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {adj1} and somewhat {adj2})\ndon't call me cis:"
 
@@ -55,19 +56,32 @@ def generate_art_style():
 class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
+    
+    async def avi(self):
+        output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
+        image = requests.get(output_url).content
+        await self.user.edit(avatar=image)
+
+    async def on_ready(self):
+        await self.avi()
 
     async def on_message(self, message):
-        messages.append(Message(message.author.name, message.content))
-
-        if message.content == "!dcmc avi":
-            output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
-            image = requests.get(output_url).content
-            await self.user.edit(avatar=image)
-            return
+        messages[message.channel].append(Message(message.author.name, message.content))
 
         if message.content == "!dcmc acid":
-            adj1 = generate_adjective()
-            adj2 = generate_adjective()
+            self.adj1 = generate_adjective()
+            self.adj2 = generate_adjective()
+            await self.avi()
+            messages[message.channel] = []
+            return
+
+        if message.content == "!dcmc amnesia":
+            messages[message.channel] = []
+            return
+
+        if message.content == "!dcmc avi":
+            await self.avi()
+            return
 
         if "dcmc" in message.content:
             p = 0.9
@@ -78,7 +92,7 @@ class MyClient(discord.Client):
             async with message.channel.typing():
                 completion = openai.Completion.create(
                     engine="text-davinci-003",
-                    prompt=messages_to_prompt(self.adj1, self.adj2),
+                    prompt=messages_to_prompt(message.channel, self.adj1, self.adj2),
                     max_tokens=256,
                     temperature=1,
                     stop=["\n"],

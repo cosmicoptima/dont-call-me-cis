@@ -5,12 +5,16 @@ from dotenv import load_dotenv
 import openai
 from os import environ
 import random
+import replicate
+import requests
 import wonderwords
 
 load_dotenv()
 
 openai.api_key = environ["OPENAI_API_KEY"]
 r = wonderwords.RandomWord()
+
+sd = replicate.models.get("cjwbw/stable-diffusion-v2")
 
 
 @dataclass
@@ -36,12 +40,34 @@ def generate_adjective():
     return word
 
 
+def generate_art_style():
+    p = random.random()
+    if p < 0.4:
+        return "digital art"
+    elif p < 0.6:
+        return "a painting"
+    elif p < 0.8:
+        return "an anime drawing"
+    else:
+        return "a 4k award-winning photograph"
+
+
 class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
 
     async def on_message(self, message):
         messages.append(Message(message.author.name, message.content))
+
+        if message.content == "!dcmc avi":
+            output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
+            image = requests.get(output_url).content
+            await self.user.edit(avatar=image)
+            return
+
+        if message.content == "!dcmc acid":
+            adj1 = generate_adjective()
+            adj2 = generate_adjective()
 
         if "dcmc" in message.content:
             p = 0.9
@@ -66,7 +92,7 @@ class MyClient(discord.Client):
 
         if random.random() < 0.02:
             self.adj1 = generate_adjective()
-        if random.random() < 0.2:
+        if random.random() < 0.1:
             self.adj2 = generate_adjective()
 
 

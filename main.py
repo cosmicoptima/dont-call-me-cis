@@ -18,7 +18,9 @@ class Message:
     author: str
     content: str
 
+
 messages = []
+
 
 def messages_to_prompt(adj1, adj2):
     body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[-25:])

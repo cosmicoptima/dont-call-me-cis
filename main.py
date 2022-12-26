@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 import openai
 from os import environ
 import random
-import time
 import wonderwords
 
 load_dotenv()

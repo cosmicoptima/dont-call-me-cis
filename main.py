@@ -91,7 +91,7 @@ class MyClient(discord.Client):
         if random.random() < p:
             async with message.channel.typing():
                 completion = openai.Completion.create(
-                    engine="text-davinci-003",
+                    engine="text-curie-001",
                     prompt=messages_to_prompt(message.channel, self.adj1, self.adj2),
                     max_tokens=256,
                     temperature=1,

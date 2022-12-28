@@ -73,7 +73,7 @@ class MyClient(discord.Client):
     def prompt(self, channel):
         body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
 
-        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is {'very short and' if random.random() < 0.8 else ''}all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
 
     async def on_ready(self):
         if not "--no-avi" in argv:
@@ -88,6 +88,7 @@ class MyClient(discord.Client):
             self.adj1 = generate_adjective()
             self.adj2 = generate_adjective()
             await self.avi()
+            await self.name()
             messages[message.channel] = []
             return
 
@@ -97,6 +98,10 @@ class MyClient(discord.Client):
 
         if message.content == "!dcmc avi":
             await self.avi()
+            return
+
+        if message.content == "!dcmc name":
+            await self.name()
             return
 
         if "dcmc" in message.content:

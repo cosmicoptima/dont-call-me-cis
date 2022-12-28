@@ -8,6 +8,7 @@ from os import environ
 import random
 import replicate
 import requests
+from sys import argv
 import wonderwords
 
 load_dotenv()
@@ -25,12 +26,6 @@ class Message:
 
 
 messages = defaultdict(list)
-
-
-def messages_to_prompt(channel, adj1, adj2):
-    body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
-
-    return "The following is a chatlog. The user 'don't call me cis' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {adj1} and somewhat {adj2})\ndon't call me cis:"
 
 
 def generate_adjective():
@@ -62,8 +57,29 @@ class MyClient(discord.Client):
         image = requests.get(output_url).content
         await self.user.edit(avatar=image)
 
+    async def name(self):
+        completion = openai.Completion.create(
+            engine="text-davinci-003",
+            prompt=f"Select a short phrase that DCMC would stand for, and that would describe a person who is remarkably {self.adj1}, and also somewhat {self.adj2}.",
+            temperature=0.65,
+        )
+        name = completion.choices[0].text.strip().lower()
+        name = "".join(c for c in name if c.isalnum() or c == " ")
+        name = " ".join(name.split())
+
+        await self.user.edit(username=name[:32])
+        self.name = name
+
+    def prompt(self, channel):
+        body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
+
+        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+
     async def on_ready(self):
-        await self.avi()
+        if not "--no-avi" in argv:
+            await self.avi()
+        if not "--no-name" in argv:
+            await self.name()
 
     async def on_message(self, message):
         messages[message.channel].append(Message(message.author.name, message.content))
@@ -92,7 +108,7 @@ class MyClient(discord.Client):
             async with message.channel.typing():
                 completion = openai.Completion.create(
                     engine="text-davinci-003",
-                    prompt=messages_to_prompt(message.channel, self.adj1, self.adj2),
+                    prompt=self.prompt(message.channel),
                     max_tokens=256,
                     temperature=1,
                     stop=["\n"],

@@ -51,6 +51,8 @@ def generate_art_style():
 class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
+
+    shushed = False
     
     async def set_avi(self):
         output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
@@ -77,7 +79,7 @@ class MyClient(discord.Client):
     def prompt(self, channel):
         body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
 
-        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is {'very short and' if random.random() < 0.8 else ''}all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. Here, {self.name} shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
 
     async def on_ready(self):
         if not "--no-avi" in argv:
@@ -108,20 +110,30 @@ class MyClient(discord.Client):
             await self.set_name()
             return
 
-        match ["dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
-            case [True, True]:
+        if message.content == "!dcmc shush":
+            self.shushed = True
+            return
+
+        if message.content == "!dcmc unshush":
+            self.shushed = False
+            return
+
+        match [shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
+            case [False, True, True]:
                 p = 1
-            case [True, False]:
+            case [False, True, False]:
                 p = 0.7
-            case [False, True]:
+            case [False, False, True]:
                 p = 0.4
-            case [False, False]:
-                p = 0.1
+            case [False, False, False]:
+                p = 0
+            case [True, _, _]:
+                p = 0
 
         if random.random() < p:
             async with message.channel.typing():
                 completion = openai.Completion.create(
-                    engine="davinci",
+                    engine="text-davinci-003",
                     prompt=self.prompt(message.channel),
                     max_tokens=256,
                     temperature=1,
@@ -138,6 +150,9 @@ class MyClient(discord.Client):
             self.adj1 = generate_adjective()
         if random.random() < 0.1:
             self.adj2 = generate_adjective()
+
+        if random.random() < 0.05:
+            self.shushed = False
 
 
 intents = discord.Intents.default()

@@ -52,22 +52,26 @@ class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
     
-    async def avi(self):
+    async def set_avi(self):
         output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
         image = requests.get(output_url).content
         await self.user.edit(avatar=image)
 
-    async def name(self):
+    async def set_name(self):
         completion = openai.Completion.create(
             engine="text-davinci-003",
-            prompt=f"Select a short phrase that DCMC would stand for, and that would describe a person who is remarkably {self.adj1}, and also somewhat {self.adj2}.",
+            prompt=f"Select a short phrase that DCMC would stand for. It should be a person's name, and indirectly allude to them being remarkably {self.adj1}, and also somewhat {self.adj2}.",
             temperature=0.65,
         )
         name = completion.choices[0].text.strip().lower()
         name = "".join(c for c in name if c.isalnum() or c == " ")
         name = " ".join(name.split())
 
-        await self.user.edit(username=name[:32])
+        members = self.get_all_members()
+        for member in members:
+            if member.id == self.user.id:
+                await member.edit(nick=name[:32])
+
         self.name = name
 
     def prompt(self, channel):
@@ -77,9 +81,9 @@ class MyClient(discord.Client):
 
     async def on_ready(self):
         if not "--no-avi" in argv:
-            await self.avi()
+            await self.set_avi()
         if not "--no-name" in argv:
-            await self.name()
+            await self.set_name()
 
     async def on_message(self, message):
         messages[message.channel].append(Message(message.author.name, message.content))
@@ -87,8 +91,8 @@ class MyClient(discord.Client):
         if message.content == "!dcmc acid":
             self.adj1 = generate_adjective()
             self.adj2 = generate_adjective()
-            await self.avi()
-            await self.name()
+            await self.set_avi()
+            await self.set_name()
             messages[message.channel] = []
             return
 
@@ -97,17 +101,22 @@ class MyClient(discord.Client):
             return
 
         if message.content == "!dcmc avi":
-            await self.avi()
+            await self.set_avi()
             return
 
         if message.content == "!dcmc name":
-            await self.name()
+            await self.set_name()
             return
 
-        if "dcmc" in message.content:
-            p = 0.9
-        else:
-            p = 0.1
+        match ["dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
+            case [True, True]:
+                p = 1
+            case [True, False]:
+                p = 0.7
+            case [False, True]:
+                p = 0.4
+            case [False, False]:
+                p = 0.1
 
         if random.random() < p:
             async with message.channel.typing():

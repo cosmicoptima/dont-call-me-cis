@@ -54,10 +54,10 @@ class MyClient(discord.Client):
         completion = openai.Completion.create(
             engine="text-davinci-003",
             prompt=f"Select a short phrase that DCMC would stand for. It should be a person's name, and indirectly allude to them being remarkably {self.adj1}, and also somewhat {self.adj2}.",
-            temperature=0.65,
+            temperature=0.8,
         )
         name = completion.choices[0].text.strip().lower()
-        name = "".join(c for c in name if c != ".")
+        name = "".join(c for c in name if c != ".\"")
         name = " ".join(name.split())
 
         members = self.get_all_members()

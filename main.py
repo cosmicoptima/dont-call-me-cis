@@ -14,8 +14,6 @@ import wonderwords
 load_dotenv()
 
 openai.api_key = environ["OPENAI_API_KEY"]
-r = wonderwords.RandomWord()
-
 sd = replicate.models.get("cjwbw/stable-diffusion-v2")
 
 
@@ -29,10 +27,12 @@ messages = defaultdict(list)
 
 
 def generate_adjective():
-    word = r.word(include_parts_of_speech=["adjective"])
-    while word == "black": # leads to racism
-        word = r.word(include_parts_of_speech=["adjective"])
-    
+    generator = wonderwords.RandomWord()
+
+    word = generator.word(include_parts_of_speech=["adjective"])
+    while word == "black":  # leads to racism
+        word = generator.word(include_parts_of_speech=["adjective"])
+
     return word
 
 
@@ -41,9 +41,12 @@ class MyClient(discord.Client):
     adj2 = generate_adjective()
 
     shushed = False
-    
+
     async def set_avi(self):
-        output_url = sd.predict(prompt=f"digital art of a person's face, Discord profile picture, {self.adj1} style, {self.adj2} style", negative_prompt="ugly")[0]
+        output_url = sd.predict(
+            prompt=f"digital art of a person's face, Discord profile picture, {self.adj1} style, {self.adj2} style",
+            negative_prompt="ugly",
+        )[0]
         image = requests.get(output_url).content
         await self.user.edit(avatar=image)
 
@@ -65,9 +68,15 @@ class MyClient(discord.Client):
         self.name = name
 
     def prompt(self, channel):
-        body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
+        body = "\n".join(
+            f"{msg.author}: {msg.content}" for msg in messages[channel][-25:]
+        )
 
-        return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. Here, {self.name} shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+        return (
+            "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n"
+            + body
+            + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. Here, {self.name} shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+        )
 
     async def on_ready(self):
         if not "--no-avi" in argv:
@@ -106,7 +115,11 @@ class MyClient(discord.Client):
             self.shushed = False
             return
 
-        p_factors = [self.shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]
+        p_factors = [
+            self.shushed,
+            "dcmc" in message.content,
+            message.channel.name == "do-converse-me-channel",
+        ]
         print("[shushed, contains dcmc, is dcmc channel]:", p_factors)
 
         match p_factors:
@@ -137,7 +150,9 @@ class MyClient(discord.Client):
                 await asyncio.sleep(len(completion.choices[0].text) / 10)
                 await message.channel.send(completion.choices[0].text)
 
-                print(f"posted - {completion.choices[0].text[:10]}... {self.adj1} {self.adj2}")
+                print(
+                    f"posted - {completion.choices[0].text[:10]}... {self.adj1} {self.adj2}"
+                )
 
         if random.random() < 0.02:
             self.adj1 = generate_adjective()

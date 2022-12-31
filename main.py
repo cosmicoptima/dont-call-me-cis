@@ -30,9 +30,9 @@ messages = defaultdict(list)
 
 def generate_adjective():
     word = r.word(include_parts_of_speech=["adjective"])
-    while word == "black": # leads to racism
+    while word == "black":  # leads to racism
         word = r.word(include_parts_of_speech=["adjective"])
-    
+
     return word
 
 
@@ -51,9 +51,11 @@ def generate_art_style():
 class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
-    
+    shushed = False
+
     async def set_avi(self):
-        output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
+        output_url = sd.predict(
+            prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
         image = requests.get(output_url).content
         await self.user.edit(avatar=image)
 
@@ -75,7 +77,8 @@ class MyClient(discord.Client):
         self.name = name
 
     def prompt(self, channel):
-        body = "\n".join(f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
+        body = "\n".join(
+            f"{msg.author}: {msg.content}" for msg in messages[channel][-25:])
 
         return "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n" + body + f"\n(The following message is {'very short and' if random.random() < 0.8 else ''}all lowercase. Here, dcmc shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
 
@@ -86,7 +89,8 @@ class MyClient(discord.Client):
             await self.set_name()
 
     async def on_message(self, message):
-        messages[message.channel].append(Message(message.author.name, message.content))
+        messages[message.channel].append(
+            Message(message.author.name, message.content))
 
         if message.content == "!dcmc acid":
             self.adj1 = generate_adjective()
@@ -108,15 +112,23 @@ class MyClient(discord.Client):
             await self.set_name()
             return
 
-        match ["dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
-            case [True, True]:
+        if message.content == "!dcmc shush":
+            self.shushed = True
+            return
+
+        match["dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
+            case[True, True]:
                 p = 1
-            case [True, False]:
+            case[True, False]:
                 p = 0.7
-            case [False, True]:
+            case[False, True]:
                 p = 0.4
-            case [False, False]:
+            case[False, False]:
                 p = 0.1
+
+        if self.shushed:
+            p = 0
+            self.shushed = random.random() > 0.85
 
         if random.random() < p:
             async with message.channel.typing():
@@ -132,7 +144,8 @@ class MyClient(discord.Client):
                 await asyncio.sleep(len(completion.choices[0].text) / 10)
                 await message.channel.send(completion.choices[0].text)
 
-                print(f"posted - {completion.choices[0].text[:10]}... {self.adj1} {self.adj2}")
+                print(
+                    f"posted - {completion.choices[0].text[:10]}... {self.adj1} {self.adj2}")
 
         if random.random() < 0.02:
             self.adj1 = generate_adjective()

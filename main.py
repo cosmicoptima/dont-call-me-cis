@@ -118,7 +118,7 @@ class MyClient(discord.Client):
             self.shushed = False
             return
 
-        match [shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
+        match [self.shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
             case [False, True, True]:
                 p = 1
             case [False, True, False]:

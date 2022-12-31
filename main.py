@@ -59,7 +59,7 @@ class MyClient(discord.Client):
 
     async def set_name(self):
         completion = openai.Completion.create(
-            engine="text-davinci-003",
+            engine="davinci",
             prompt=f"Select a short phrase that DCMC would stand for. It should be a person's name, and indirectly allude to them being remarkably {self.adj1}, and also somewhat {self.adj2}.",
             temperature=0.65,
         )

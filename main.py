@@ -36,18 +36,6 @@ def generate_adjective():
     return word
 
 
-def generate_art_style():
-    p = random.random()
-    if p < 0.4:
-        return "digital art"
-    elif p < 0.6:
-        return "a painting"
-    elif p < 0.8:
-        return "an anime drawing"
-    else:
-        return "a 4k award-winning photograph"
-
-
 class MyClient(discord.Client):
     adj1 = generate_adjective()
     adj2 = generate_adjective()
@@ -55,7 +43,7 @@ class MyClient(discord.Client):
     shushed = False
     
     async def set_avi(self):
-        output_url = sd.predict(prompt=f"{generate_art_style()} of a person's face who is {self.adj1} and {self.adj2}")[0]
+        output_url = sd.predict(prompt=f"digital art of a person's face, Discord profile picture, {self.adj1} style, {self.adj2} style", negative_prompt="ugly")[0]
         image = requests.get(output_url).content
         await self.user.edit(avatar=image)
 
@@ -66,7 +54,7 @@ class MyClient(discord.Client):
             temperature=0.65,
         )
         name = completion.choices[0].text.strip().lower()
-        name = "".join(c for c in name if c.isalnum() or c == " ")
+        name = "".join(c for c in name if c != ".")
         name = " ".join(name.split())
 
         members = self.get_all_members()
@@ -118,7 +106,10 @@ class MyClient(discord.Client):
             self.shushed = False
             return
 
-        match [self.shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]:
+        p_factors = [self.shushed, "dcmc" in message.content, message.channel.name == "do-converse-me-channel"]
+        print("[shushed, contains dcmc, is dcmc channel]:", p_factors)
+
+        match p_factors:
             case [False, True, True]:
                 p = 1
             case [False, True, False]:
@@ -129,6 +120,8 @@ class MyClient(discord.Client):
                 p = 0
             case [True, _, _]:
                 p = 0
+
+        print("p:", p)
 
         if random.random() < p:
             async with message.channel.typing():

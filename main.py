@@ -8,6 +8,7 @@ from os import environ
 import random
 import replicate
 import requests
+from rich.console import Console
 from sys import argv
 import wonderwords
 
@@ -15,6 +16,8 @@ load_dotenv()
 
 openai.api_key = environ["OPENAI_API_KEY"]
 sd = replicate.models.get("cjwbw/stable-diffusion-v2")
+
+console = Console()
 
 
 @dataclass
@@ -44,7 +47,7 @@ class MyClient(discord.Client):
 
     async def set_avi(self):
         output_url = sd.predict(
-            prompt=f"digital art of a person's face, Discord profile picture, {self.adj1} style, {self.adj2} style",
+            prompt=f"digital art of a {self.name}, close-up of a face, Discord profile picture, {self.adj1} style, {self.adj2} style",
             negative_prompt="ugly",
         )[0]
         image = requests.get(output_url).content
@@ -57,7 +60,7 @@ class MyClient(discord.Client):
             temperature=0.8,
         )
         name = completion.choices[0].text.strip().lower()
-        name = "".join(c for c in name if c != ".\"")
+        name = "".join(c for c in name if c not in ".\"")
         name = " ".join(name.split())
 
         members = self.get_all_members()
@@ -75,14 +78,14 @@ class MyClient(discord.Client):
         return (
             "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n"
             + body
-            + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. Here, {self.name} shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2})\n{self.name}:"
+            + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. Here, {self.name} shifts tone and vocabulary completely and instead exposes themselves as remarkably {self.adj1} and somewhat {self.adj2}.)\n{self.name}:"
         )
 
     async def on_ready(self):
-        if not "--no-avi" in argv:
-            await self.set_avi()
         if not "--no-name" in argv:
             await self.set_name()
+        if not "--no-avi" in argv:
+            await self.set_avi()
 
     async def on_message(self, message):
         messages[message.channel].append(Message(message.author.name, message.content))
@@ -90,8 +93,8 @@ class MyClient(discord.Client):
         if message.content == "!dcmc acid":
             self.adj1 = generate_adjective()
             self.adj2 = generate_adjective()
-            await self.set_avi()
             await self.set_name()
+            await self.set_avi()
             messages[message.channel] = []
             return
 
@@ -120,7 +123,6 @@ class MyClient(discord.Client):
             "dcmc" in message.content,
             message.channel.name == "do-converse-me-channel",
         ]
-        print("[shushed, contains dcmc, is dcmc channel]:", p_factors)
 
         match p_factors:
             case [False, True, True]:
@@ -134,8 +136,6 @@ class MyClient(discord.Client):
             case [True, _, _]:
                 p = 0
 
-        print("p:", p)
-
         if random.random() < p:
             async with message.channel.typing():
                 completion = openai.Completion.create(
@@ -147,12 +147,11 @@ class MyClient(discord.Client):
                     frequency_penalty=0.5,
                     presence_penalty=0.5,
                 )
-                await asyncio.sleep(len(completion.choices[0].text) / 10)
-                await message.channel.send(completion.choices[0].text)
+                text = completion.choices[0].text.strip()
+                await asyncio.sleep(len(text) / 10)
+                await message.channel.send(text)
 
-                print(
-                    f"posted - {completion.choices[0].text[:10]}... {self.adj1} {self.adj2}"
-                )
+                console.log("[b]POSTED[/b]", f"[green]{text}[/green]", f"[yellow]{self.adj1}[/yellow]", f"[yellow]{self.adj2}[/yellow]")
 
         if random.random() < 0.02:
             self.adj1 = generate_adjective()

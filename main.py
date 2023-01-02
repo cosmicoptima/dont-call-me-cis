@@ -83,7 +83,7 @@ class MyClient(discord.Client):
             final_sentence = f"Here, {self.name} becomes slightly more {self.adj1} and {self.adj2} than in their previous message."
 
         return (
-            "The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n"
+            f"The following is a chatlog. The user '{self.name}' is insane and always replies in an unhinged manner.\n\n"
             + body
             + f"\n(The following message is {'very short and ' if random.random() < 0.8 else ''}all lowercase. {final_sentence})\n{self.name}:"
         )

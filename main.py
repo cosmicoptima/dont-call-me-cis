@@ -130,7 +130,7 @@ class MyClient(discord.Client):
             p = 0
         else:
             p_factors = [
-                "dcmc" in message.content,
+                "dcmc" in message.content.lower(),
                 message.channel.name == "do-converse-me-channel",
             ]
 
